@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 测试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-item { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .question { font-weight: bold; color: #333; }
+        .response { margin-top: 10px; color: #666; }
+        .time { font-size: 12px; color: #999; }
+        .error { color: red; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        #results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>AI 回复测试</h1>
+    <button onclick="runAllTests()">运行所有测试</button>
+    <button onclick="clearResults()">清空结果</button>
+
+    <div id="results"></div>
+
+    <script type="module">
+        const testMessages = [
+            '这个植物好养吗',
+            '多久浇一次水',
+            '适合办公室养吗',
+            '新手适合养什么',
+            '办公室养什么好',
+            '没阳光养什么',
+            '帮我推荐店里的植物',
+            '家里有猫能养吗',
+            '虎皮兰和绿萝哪个好养',
+            '龟背竹和发财树有什么区别'
+        ];
+
+        let agent = null;
+
+        // 动态导入 AI 服务
+        async function initAgent() {
+            try {
+                const { ChatAgent } = await import('./src/services/aiService.ts');
+                agent = new ChatAgent();
+                console.log('AI Agent 初始化成功');
+            } catch (error) {
+                console.error('AI Agent 初始化失败:', error);
+                document.getElementById('results').innerHTML = '<div class="error">AI Agent 初始化失败: ' + error.message + '</div>';
+            }
+        }
+
+        async function testMessage(message, index) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-item';
+            resultDiv.innerHTML = `<div class="question">测试 ${index + 1}: ${message}</div>`;
+
+            document.getElementById('results').appendChild(resultDiv);
+
+            try {
+                const startTime = Date.now();
+                const response = await agent.sendMessage(message);
+                const endTime = Date.now();
+
+                resultDiv.innerHTML += `
+                    <div class="response">${response.text}</div>
+                    <div class="time">耗时: ${endTime - startTime}ms</div>
+                `;
+
+                if (response.data) {
+                    resultDiv.innerHTML += `<div class="response">数据: ${JSON.stringify(response.data, null, 2)}</div>`;
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="error">错误: ${error.message}</div>`;
+            }
+        }
+
+        async function runAllTests() {
+            if (!agent) {
+                await initAgent();
+            }
+
+            document.getElementById('results').innerHTML = '<div>开始测试...</div>';
+
+            for (let i = 0; i < testMessages.length; i++) {
+                await testMessage(testMessages[i], i);
+                // 添加小延迟避免请求过于频繁
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            document.getElementById('results').innerHTML += '<div style="margin-top: 20px; font-weight: bold;">测试完成！</div>';
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // 页面加载时初始化
+        window.addEventListener('load', initAgent);
+    </script>
+</body>
+</html>
